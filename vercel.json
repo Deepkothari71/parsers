@@ -16,11 +16,6 @@
       "dest": "/$1"
     }
   ],
-  "functions": {
-    "app.py": {
-      "maxDuration": 30
-    }
-  },
   "env": {
     "PYTHONPATH": "."
   }
