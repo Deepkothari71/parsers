@@ -3,21 +3,17 @@ from flask_cors import CORS
 from werkzeug.utils import secure_filename
 import os
 import json
+import tempfile
 from parsers.bank_parsers import detect_bank_and_parse
 
 app = Flask(__name__)
 CORS(app)
 
-# Configuration
-UPLOAD_FOLDER = 'uploads'
+# Configuration for Vercel
 ALLOWED_EXTENSIONS = {'pdf'}
 MAX_FILE_SIZE = 5 * 1024 * 1024  # 5MB
 
-app.config['UPLOAD_FOLDER'] = UPLOAD_FOLDER
 app.config['MAX_CONTENT_LENGTH'] = MAX_FILE_SIZE
-
-# Create upload folder if it doesn't exist
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -47,10 +43,11 @@ def parse_statement():
         if not allowed_file(file.filename):
             return jsonify({'error': 'Only PDF files are allowed'}), 400
         
-        # Save file temporarily
+        # Save file temporarily using tempfile for Vercel compatibility
         filename = secure_filename(file.filename)
-        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        file.save(filepath)
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as tmp_file:
+            file.save(tmp_file.name)
+            filepath = tmp_file.name
         
         try:
             # Parse the PDF
@@ -75,8 +72,11 @@ def parse_statement():
         
         finally:
             # Clean up - delete the uploaded file
-            if os.path.exists(filepath):
-                os.remove(filepath)
+            try:
+                if os.path.exists(filepath):
+                    os.remove(filepath)
+            except Exception as e:
+                print(f"Warning: Could not delete temp file {filepath}: {e}")
     
     except Exception as e:
         return jsonify({'error': f'Server error: {str(e)}'}), 500
@@ -107,6 +107,13 @@ def download_data(format):
 @app.errorhandler(413)
 def file_too_large(e):
     return jsonify({'error': 'File size exceeds 5MB limit'}), 413
+
+# For Vercel deployment
+def handler(request):
+    return app(request.environ, start_response)
+
+def start_response(status, headers):
+    pass
 
 if __name__ == '__main__':
     print("🚀 Credit Card Statement Parser Server")

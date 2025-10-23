@@ -610,7 +610,7 @@
             formData.append('file', selectedFile);
 
             try {
-                const response = await fetch('http://localhost:5000/api/parse', {
+                const response = await fetch('/api/parse', {
                     method: 'POST',
                     body: formData
                 });
@@ -626,7 +626,7 @@
                     loading.classList.remove('show');
                 }
             } catch (error) {
-                alert('Connection error: ' + error.message + '\n\nMake sure the Flask server is running on http://localhost:5000');
+                alert('Connection error: ' + error.message + '\n\nPlease try again later.');
                 loading.classList.remove('show');
             }
         });
